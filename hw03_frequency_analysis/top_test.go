@@ -7,7 +7,7 @@ import (
 )
 
 // Change to true if needed.
-var taskWithAsteriskIsCompleted = false
+var taskWithAsteriskIsCompleted = true
 
 var text = `Как видите, он  спускается  по  лестнице  вслед  за  своим
 	другом   Кристофером   Робином,   головой   вниз,  пересчитывая
@@ -79,4 +79,108 @@ func TestTop10(t *testing.T) {
 			require.Equal(t, expected, Top10(text))
 		}
 	})
+
+	tests := []struct {
+		name  string
+		input string
+		want  []string
+	}{
+		{
+			name:  "only whitespace",
+			input: "   \t\n  ",
+			want:  []string{},
+		},
+		{
+			name:  "single word",
+			input: "hello",
+			want:  []string{"hello"},
+		},
+		{
+			name:  "less than 10 unique words",
+			input: "a b a b",
+			want:  []string{"a", "b"},
+		},
+		{
+			name:  "frequency over lexicographic order",
+			input: "bbb zzz zzz zzz aaa aaa",
+			want:  []string{"zzz", "aaa", "bbb"},
+		},
+		{
+			name:  "lexicographic order",
+			input: "bbb aaa ccc aaa bbb ccc",
+			want:  []string{"aaa", "bbb", "ccc"},
+		},
+		{
+			name:  "more than 10 words with same frequency",
+			input: "a b c d e f g h i j k l m n o",
+			want:  []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j"},
+		},
+		{
+			name:  "exactly 10 unique words",
+			input: "a b c d e f g h i j",
+			want:  []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j"},
+		},
+		{
+			name:  "case insensitive",
+			input: "Нога нога НОГА",
+			want:  []string{"нога"},
+		},
+		{
+			name:  "trim punctuation",
+			input: "нога! 'нога' нога, \"нога\"",
+			want:  []string{"нога"},
+		},
+		{
+			name:  "keep punctuation inside word",
+			input: "dog,cat dog...cat dogcat",
+			want:  []string{"dog,cat", "dog...cat", "dogcat"},
+		},
+		{
+			name:  "different word forms",
+			input: "нога ногу ноги",
+			want:  []string{"нога", "ноги", "ногу"},
+		},
+		{
+			name:  "dash inside word",
+			input: "Винни-Пух винни-пух",
+			want:  []string{"винни-пух"},
+		},
+		{
+			name:  "dash rules",
+			input: "- ------- какой-то какойто -",
+			want:  []string{"-------", "какой-то", "какойто"},
+		},
+		{
+			name:  "readme example",
+			input: "cat and dog, one dog,two cats and one man",
+			want:  []string{"and", "one", "cat", "cats", "dog", "dog,two", "man"},
+		},
+		{
+			name:  "words are different",
+			input: "какой-то какойто",
+			want:  []string{"какой-то", "какойто"},
+		},
+		{
+			name:  "top word plus lexicographic tail",
+			input: "word word word word word a b c d e f g h i j k",
+			want:  []string{"word", "a", "b", "c", "d", "e", "f", "g", "h", "i"},
+		},
+		{
+			name:  "single dash is not a word",
+			input: "- - -",
+			want:  []string{},
+		},
+		{
+			name:  "dash sequence is a word",
+			input: "-------",
+			want:  []string{"-------"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := Top10(tt.input)
+			require.Equal(t, tt.want, got)
+		})
+	}
 }
