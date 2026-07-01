@@ -1,7 +1,5 @@
 package hw04lrucache
 
-import "slices"
-
 type List interface {
 	Len() int
 	Front() *ListItem
@@ -19,110 +17,105 @@ type ListItem struct {
 }
 
 type list struct {
-	items []*ListItem
+	first *ListItem
+	last  *ListItem
+	len   int
 }
 
 func NewList() List {
-	data := make([]*ListItem, 0)
-	return &list{data}
+	return &list{}
 }
 
 func (l *list) Len() int {
-	if l.items == nil {
-		return 0
-	}
-
-	return len(l.items)
+	return l.len
 }
 
 func (l *list) Front() *ListItem {
-	if l.Len() == 0 {
-		return nil
-	}
-	return l.items[0]
+	return l.first
 }
 
 func (l *list) Back() *ListItem {
-	if l.Len() == 0 {
-		return nil
-	}
-	return l.items[l.Len()-1]
+	return l.last
 }
 
 func (l *list) PushFront(v interface{}) *ListItem {
-	if l.items == nil {
-		return nil
+	l.first = &ListItem{
+		Value: v,
+		Next:  l.Front(),
+		Prev:  nil,
 	}
 
-	li := &ListItem{v, nil, nil}
+	if l.Front().Next != nil {
+		l.Front().Next.Prev = l.Front()
+	}
 
 	if l.Len() == 0 {
-		l.items = append(l.items, li)
-		return l.Front()
+		l.last = l.Front()
 	}
 
-	li.Next = l.Front()
-	l.Front().Prev = li
-
-	l.items = slices.Insert(l.items, 0, li)
+	l.len++
 
 	return l.Front()
 }
 
 func (l *list) PushBack(v interface{}) *ListItem {
-	if l.items == nil {
-		return nil
+	l.last = &ListItem{
+		Value: v,
+		Next:  nil,
+		Prev:  l.Back(),
 	}
 
-	li := &ListItem{v, nil, nil}
+	if l.Back().Prev != nil {
+		l.Back().Prev.Next = l.Back()
+	}
 
 	if l.Len() == 0 {
-		l.items = append(l.items, li)
-		return l.Back()
+		l.first = l.Back()
 	}
 
-	li.Prev = l.Back()
-	l.Back().Next = li
-
-	l.items = slices.Insert(l.items, l.Len(), li)
+	l.len++
 
 	return l.Back()
 }
 
 func (l *list) Remove(i *ListItem) {
-	if i == nil || l.items == nil {
+	if i == nil {
 		return
 	}
-
-	index := slices.IndexFunc(l.items, func(item *ListItem) bool {
-		return item.Value == i.Value
-	})
-
-	if index > -1 {
-		deleting := l.items[index]
-
-		if deleting.Prev != nil {
-			deleting.Prev.Next = deleting.Next
-		}
-		if deleting.Next != nil {
-			deleting.Next.Prev = deleting.Prev
-		}
-
-		l.items = slices.Delete(l.items, index, index+1)
-	}
+	l.removeWithoutDec(i)
+	l.len--
 }
 
 func (l *list) MoveToFront(i *ListItem) {
-	if i == nil || l.items == nil {
+	if i == nil || i == l.first {
 		return
 	}
 
-	index := slices.IndexFunc(l.items, func(item *ListItem) bool {
-		return item.Value == i.Value
-	})
+	l.removeWithoutDec(i)
 
-	if index > -1 {
-		l.Remove(i)
-		l.PushFront(i.Value)
+	i.Prev = nil
+	i.Next = l.first
+
+	if l.first != nil {
+		l.first.Prev = i
+	}
+	l.first = i
+}
+
+func (l *list) removeWithoutDec(i *ListItem) {
+	if i == nil {
+		return
+	}
+
+	if i.Prev != nil {
+		i.Prev.Next = i.Next
+	} else {
+		l.first = i.Next
+	}
+
+	if i.Next != nil {
+		i.Next.Prev = i.Prev
+	} else {
+		l.last = i.Prev
 	}
 }
