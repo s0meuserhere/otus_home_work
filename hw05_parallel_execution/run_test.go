@@ -67,4 +67,36 @@ func TestRun(t *testing.T) {
 		require.Equal(t, int32(tasksCount), runTasksCount, "not all tasks were completed")
 		require.LessOrEqual(t, int64(elapsedTime), int64(sumTime/2), "tasks were run sequentially?")
 	})
+
+	t.Run("invalid max errors count", func(t *testing.T) {
+		tasks := []Task{
+			func() error { return nil },
+		}
+
+		err := Run(tasks, 1, 0)
+		require.ErrorIs(t, err, ErrInvalidNumberOfMaxErrors)
+		require.NotErrorIs(t, err, ErrErrorsLimitExceeded)
+		require.NotErrorIs(t, err, ErrInvalidNumberOfGoroutines)
+
+		err = Run(tasks, 1, -5)
+		require.ErrorIs(t, err, ErrInvalidNumberOfMaxErrors)
+		require.NotErrorIs(t, err, ErrErrorsLimitExceeded)
+		require.NotErrorIs(t, err, ErrInvalidNumberOfGoroutines)
+	})
+
+	t.Run("invalid number of goroutines", func(t *testing.T) {
+		tasks := []Task{
+			func() error { return nil },
+		}
+
+		err := Run(tasks, 0, 1)
+		require.ErrorIs(t, err, ErrInvalidNumberOfGoroutines)
+		require.NotErrorIs(t, err, ErrErrorsLimitExceeded)
+		require.NotErrorIs(t, err, ErrInvalidNumberOfMaxErrors)
+
+		err = Run(tasks, -3, 1)
+		require.ErrorIs(t, err, ErrInvalidNumberOfGoroutines)
+		require.NotErrorIs(t, err, ErrErrorsLimitExceeded)
+		require.NotErrorIs(t, err, ErrInvalidNumberOfMaxErrors)
+	})
 }
