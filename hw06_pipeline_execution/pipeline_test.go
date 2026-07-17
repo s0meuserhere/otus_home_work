@@ -145,6 +145,102 @@ func TestAllStageStop(t *testing.T) {
 		wg.Wait()
 
 		require.Len(t, result, 0)
-
 	})
+}
+
+func testStages() []Stage {
+	g := func(_ string, f func(v interface{}) interface{}) Stage {
+		return func(in In) Out {
+			out := make(Bi)
+			go func() {
+				defer close(out)
+				for v := range in {
+					time.Sleep(sleepPerStage)
+					out <- f(v)
+				}
+			}()
+			return out
+		}
+	}
+
+	return []Stage{
+		g("Dummy", func(v interface{}) interface{} { return v }),
+		g("Multiplier (* 2)", func(v interface{}) interface{} { return v.(int) * 2 }),
+		g("Adder (+ 100)", func(v interface{}) interface{} { return v.(int) + 100 }),
+		g("Stringifier", func(v interface{}) interface{} { return strconv.Itoa(v.(int)) }),
+	}
+}
+
+func TestPipeline_Extra(t *testing.T) {
+	stages := testStages()
+
+	t.Run("no stages", func(t *testing.T) {
+		in := make(Bi)
+		go func() {
+			in <- 1
+			in <- 2
+			close(in)
+		}()
+
+		got := make([]int, 0, 2)
+		for v := range ExecutePipeline(in, nil, []Stage{}...) {
+			got = append(got, v.(int))
+		}
+		require.Equal(t, []int{1, 2}, got)
+	})
+
+	t.Run("single stage", func(t *testing.T) {
+		in := make(Bi)
+		go func() {
+			for _, v := range []int{1, 2, 3} {
+				in <- v
+			}
+			close(in)
+		}()
+
+		result := make([]string, 0, 3)
+		for s := range ExecutePipeline(in, nil, stages[3]) {
+			result = append(result, s.(string))
+		}
+		require.Equal(t, []string{"1", "2", "3"}, result)
+	})
+
+	t.Run("empty input", func(t *testing.T) {
+		in := make(Bi)
+		close(in)
+
+		result := make([]string, 0)
+		for s := range ExecutePipeline(in, nil, stages...) {
+			result = append(result, s.(string))
+		}
+		require.Empty(t, result)
+	})
+}
+
+func TestPipeline_DoneAlreadyClosed(t *testing.T) {
+	data := []int{1, 2, 3}
+	in := make(Bi, len(data))
+	done := make(Bi)
+	close(done)
+
+	go func() {
+		for _, v := range data {
+			in <- v
+		}
+		close(in)
+	}()
+
+	finished := make(chan struct{})
+	go func() {
+		defer close(finished)
+		for v := range ExecutePipeline(in, done, testStages()...) {
+			_ = v
+		}
+	}()
+
+	select {
+	case <-finished:
+	case <-time.After(2 * time.Second):
+		t.Fatal("pipeline did not terminate")
+	}
 }
