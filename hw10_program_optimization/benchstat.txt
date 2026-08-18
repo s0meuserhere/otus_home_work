@@ -1,0 +1,15 @@
+goos: darwin
+goarch: arm64
+pkg: github.com/s0meuserhere/otus_home_work/hw10_program_optimization
+cpu: Apple M4 Pro
+                 │   old.txt    │               new.txt               │
+                 │    sec/op    │   sec/op     vs base                │
+GetDomainStat-12   180.66m ± 1%   92.24m ± 2%  -48.94% (p=0.000 n=10)
+
+                 │    old.txt    │               new.txt                │
+                 │     B/op      │     B/op      vs base                │
+GetDomainStat-12   328.06Mi ± 0%   25.19Mi ± 0%  -92.32% (p=0.000 n=10)
+
+                 │   old.txt    │               new.txt               │
+                 │  allocs/op   │  allocs/op   vs base                │
+GetDomainStat-12   3044.4k ± 0%   622.2k ± 0%  -79.56% (p=0.000 n=10)

@@ -1,66 +1,59 @@
 package hw10programoptimization
 
 import (
+	"bufio"
+	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
-	"regexp"
 	"strings"
 )
 
 type User struct {
-	ID       int
-	Name     string
-	Username string
-	Email    string
-	Phone    string
-	Password string
-	Address  string
+	Email string
 }
 
 type DomainStat map[string]int
 
 func GetDomainStat(r io.Reader, domain string) (DomainStat, error) {
-	u, err := getUsers(r)
+	s, err := getStat(r, domain)
 	if err != nil {
-		return nil, fmt.Errorf("get users error: %w", err)
+		return nil, fmt.Errorf("get stat error: %w", err)
 	}
-	return countDomains(u, domain)
+
+	return s, nil
 }
 
-type users [100_000]User
-
-func getUsers(r io.Reader) (result users, err error) {
-	content, err := io.ReadAll(r)
-	if err != nil {
-		return
-	}
-
-	lines := strings.Split(string(content), "\n")
-	for i, line := range lines {
-		var user User
-		if err = json.Unmarshal([]byte(line), &user); err != nil {
-			return
-		}
-		result[i] = user
-	}
-	return
-}
-
-func countDomains(u users, domain string) (DomainStat, error) {
+func getStat(r io.Reader, domain string) (DomainStat, error) {
 	result := make(DomainStat)
+	reader := bufio.NewReader(r)
 
-	for _, user := range u {
-		matched, err := regexp.Match("\\."+domain, []byte(user.Email))
-		if err != nil {
-			return nil, err
+	for {
+		line, err := reader.ReadSlice('\n')
+		if err != nil && !errors.Is(err, io.EOF) {
+			return nil, fmt.Errorf("read line: %w", err)
 		}
 
-		if matched {
-			num := result[strings.ToLower(strings.SplitN(user.Email, "@", 2)[1])]
-			num++
-			result[strings.ToLower(strings.SplitN(user.Email, "@", 2)[1])] = num
+		line = bytes.TrimSpace(line)
+		if len(line) > 0 {
+			var u User
+			if unmarshalErr := json.Unmarshal(line, &u); unmarshalErr != nil {
+				return nil, fmt.Errorf("unmarshal user: %w", unmarshalErr)
+			}
+
+			if strings.Contains(u.Email, "."+domain) {
+				parts := strings.SplitN(u.Email, "@", 2)
+				if len(parts) == 2 {
+					result[strings.ToLower(parts[1])]++
+				}
+			}
+		}
+
+		if errors.Is(err, io.EOF) {
+			break
 		}
 	}
+
 	return result, nil
 }
