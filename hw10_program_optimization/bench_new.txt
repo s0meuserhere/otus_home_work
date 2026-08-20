@@ -1,0 +1,16 @@
+goos: darwin
+goarch: arm64
+pkg: github.com/s0meuserhere/otus_home_work/hw10_program_optimization
+cpu: Apple M4 Pro
+BenchmarkGetDomainStat-12    	      12	  90005899 ns/op	26408489 B/op	  622191 allocs/op
+BenchmarkGetDomainStat-12    	      12	  90740788 ns/op	26408485 B/op	  622191 allocs/op
+BenchmarkGetDomainStat-12    	      12	  91170413 ns/op	26408494 B/op	  622191 allocs/op
+BenchmarkGetDomainStat-12    	      12	  92250774 ns/op	26408489 B/op	  622191 allocs/op
+BenchmarkGetDomainStat-12    	      12	  92229118 ns/op	26408509 B/op	  622191 allocs/op
+BenchmarkGetDomainStat-12    	      12	  95414427 ns/op	26408477 B/op	  622191 allocs/op
+BenchmarkGetDomainStat-12    	      12	  93886163 ns/op	26408480 B/op	  622191 allocs/op
+BenchmarkGetDomainStat-12    	      12	  93217000 ns/op	26408469 B/op	  622191 allocs/op
+BenchmarkGetDomainStat-12    	      12	  92326552 ns/op	26408500 B/op	  622191 allocs/op
+BenchmarkGetDomainStat-12    	      12	  92091920 ns/op	26408481 B/op	  622191 allocs/op
+PASS
+ok  	github.com/s0meuserhere/otus_home_work/hw10_program_optimization	13.895s
