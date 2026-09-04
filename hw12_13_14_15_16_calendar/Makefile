@@ -10,6 +10,7 @@ POSTGRES_PASSWORD ?= password
 POSTGRES_DB ?= backend
 POSTGRES_PORT ?= 5435
 POSTGRES_CONTAINER := postgres-calendar
+POSTGRES_DSN ?= postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@localhost:$(POSTGRES_PORT)/$(POSTGRES_DB)?sslmode=disable
 
 #Rabbit
 RABBIT_USER ?= rabbit
@@ -26,7 +27,12 @@ run-postgres:
 	-e POSTGRES_DB=$(POSTGRES_DB) \
 	-p $(POSTGRES_PORT):5432 \
 	-v postgres-data:/var/lib/postgresql/data \
-	postgres:latest
+	postgres:14.1-alpine
+
+create-db:
+	-docker exec -e PGPASSWORD=$(POSTGRES_PASSWORD) $(POSTGRES_CONTAINER) \
+		psql -U $(POSTGRES_USER) -d postgres \
+		-c "CREATE DATABASE $(POSTGRES_DB);"
 
 run-rabbit:
 	docker run -d --name $(RABBIT_CONTAINER) \
@@ -40,7 +46,12 @@ build:
 	go build -v -o $(BIN) -ldflags "$(LDFLAGS)" ./cmd/calendar
 
 run: build
-	$(BIN) -config ./configs/config.toml
+	$(BIN) -config ./configs/config.env
+
+migrate:
+	go run github.com/pressly/goose/v3/cmd/goose@latest \
+		-dir ./migrations \
+		postgres "$(POSTGRES_DSN)" up
 
 build-img:
 	docker build \
@@ -49,18 +60,18 @@ build-img:
 		-f build/Dockerfile .
 
 run-img: build-img
-	docker run $(DOCKER_IMG)
+	docker run -p 8080:8080 $(DOCKER_IMG)
 
 version: build
 	$(BIN) version
 
 test:
-	go test -race ./internal/... ./pkg/...
+	go test -race ./...
 
 install-lint-deps:
-	(which golangci-lint > /dev/null) || curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(shell go env GOPATH)/bin v1.57.2
+	(which golangci-lint > /dev/null) || curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(shell go env GOPATH)/bin v1.63.4
 
 lint: install-lint-deps
 	golangci-lint run ./...
 
-.PHONY: build run build-img run-img version test lint
+.PHONY: build run migrate create-db build-img run-img version test lint run-postgres run-rabbit
