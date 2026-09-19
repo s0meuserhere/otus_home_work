@@ -68,10 +68,20 @@ version: build
 test:
 	go test -race ./...
 
+install-proto-deps:
+	go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.5
+	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.5.1
+
+install-api-deps: install-proto-deps
+	go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.4.1
+
+generate:
+	go generate ./...
+
 install-lint-deps:
 	(which golangci-lint > /dev/null) || curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(shell go env GOPATH)/bin v1.63.4
 
 lint: install-lint-deps
 	golangci-lint run ./...
 
-.PHONY: build run migrate create-db build-img run-img version test lint run-postgres run-rabbit
+.PHONY: build run migrate create-db build-img run-img version test lint run-postgres run-rabbit generate install-proto-deps install-api-deps

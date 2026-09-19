@@ -17,6 +17,11 @@ linters-settings:
           - github.com/google/uuid
           - github.com/jackc/pgx
           - github.com/ilyakaznacheev/cleanenv
+          - google.golang.org/grpc
+          - google.golang.org/protobuf
+          - golang.org/x/sync
+          - github.com/oapi-codegen/runtime
+          - github.com/getkin/kin-openapi
       Test:
         files:
           - $test
@@ -26,6 +31,8 @@ linters-settings:
           - github.com/google/uuid
           - github.com/jackc/pgx
           - github.com/stretchr/testify
+          - google.golang.org/grpc
+          - google.golang.org/protobuf
 
 issues:
   exclude-rules:
@@ -37,6 +44,12 @@ issues:
         - gocognit
         - gosec
         - funlen
+    - path: internal/server/grpc/gen/
+      linters:
+        - all
+    - path: internal/server/http/gen/
+      linters:
+        - all
 
 linters:
   disable-all: true

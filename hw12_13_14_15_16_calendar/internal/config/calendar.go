@@ -19,6 +19,7 @@ type CalendarConf struct {
 
 	Logger LoggerConf
 	HTTP   HTTPConf
+	GRPC   GRPCConf
 	DB     PGConf
 }
 
@@ -33,6 +34,15 @@ type HTTPConf struct {
 
 func (h HTTPConf) Addr() string {
 	return fmt.Sprintf("%s:%s", h.Host, h.Port)
+}
+
+type GRPCConf struct {
+	Host string `env:"GRPC_HOST" env-default:"0.0.0.0"`
+	Port string `env:"GRPC_PORT" env-default:"9090"`
+}
+
+func (g GRPCConf) Addr() string {
+	return fmt.Sprintf("%s:%s", g.Host, g.Port)
 }
 
 func Load(path string) (*CalendarConf, error) {

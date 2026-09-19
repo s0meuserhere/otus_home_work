@@ -1,0 +1,244 @@
+openapi: 3.0.3
+info:
+  title: Calendar API
+  version: 1.0.0
+  description: HTTP API сервиса Календарь
+servers:
+  - url: http://localhost:8080
+
+paths:
+  /hello:
+    get:
+      operationId: GetHello
+      summary: Health/hello endpoint
+      responses:
+        "200":
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /events:
+    post:
+      operationId: CreateEvent
+      summary: Создать событие
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EventRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Event"
+        "400":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "500":
+          $ref: "#/components/responses/Error"
+
+  /events/{id}:
+    put:
+      operationId: UpdateEvent
+      summary: Обновить событие
+      parameters:
+        - $ref: "#/components/parameters/EventID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EventRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Event"
+        "400":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "500":
+          $ref: "#/components/responses/Error"
+    delete:
+      operationId: DeleteEvent
+      summary: Удалить событие
+      parameters:
+        - $ref: "#/components/parameters/EventID"
+      responses:
+        "204":
+          description: No Content
+        "400":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "500":
+          $ref: "#/components/responses/Error"
+
+  /events/day:
+    get:
+      operationId: ListEventsByDay
+      summary: Список событий на день
+      parameters:
+        - $ref: "#/components/parameters/Date"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventList"
+        "400":
+          $ref: "#/components/responses/Error"
+        "500":
+          $ref: "#/components/responses/Error"
+
+  /events/week:
+    get:
+      operationId: ListEventsByWeek
+      summary: Список событий на неделю
+      parameters:
+        - $ref: "#/components/parameters/Date"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventList"
+        "400":
+          $ref: "#/components/responses/Error"
+        "500":
+          $ref: "#/components/responses/Error"
+
+  /events/month:
+    get:
+      operationId: ListEventsByMonth
+      summary: Список событий на месяц
+      parameters:
+        - $ref: "#/components/parameters/Date"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventList"
+        "400":
+          $ref: "#/components/responses/Error"
+        "500":
+          $ref: "#/components/responses/Error"
+
+components:
+  parameters:
+    EventID:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    Date:
+      name: date
+      in: query
+      required: true
+      description: Дата в формате YYYY-MM-DD
+      schema:
+        type: string
+        format: date
+
+  schemas:
+    EventRequest:
+      type: object
+      required:
+        - title
+        - date_start
+        - date_end
+        - description
+        - user_id
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        date_start:
+          type: string
+          format: date-time
+        date_end:
+          type: string
+          format: date-time
+        description:
+          type: string
+        user_id:
+          type: string
+          format: uuid
+        notify_shift_seconds:
+          type: integer
+          default: 0
+
+    Event:
+      type: object
+      required:
+        - id
+        - title
+        - date_start
+        - date_end
+        - description
+        - user_id
+        - notify_shift_seconds
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        date_start:
+          type: string
+          format: date-time
+        date_end:
+          type: string
+          format: date-time
+        description:
+          type: string
+        user_id:
+          type: string
+          format: uuid
+        notify_shift_seconds:
+          type: integer
+
+    EventList:
+      type: object
+      required:
+        - events
+      properties:
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/Event"
+
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+
+  responses:
+    Error:
+      description: Error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
