@@ -10,8 +10,11 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/s0meuserhere/otus_home_work/hw12_13_14_15_calendar/internal/domain/event"
+	"github.com/s0meuserhere/otus_home_work/hw12_13_14_15_calendar/internal/logger"
 	"github.com/s0meuserhere/otus_home_work/hw12_13_14_15_calendar/internal/server/http/gen"
 )
+
+const maxBodySize = 1024 * 1024
 
 func (s *Server) GetHello(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
@@ -19,58 +22,58 @@ func (s *Server) GetHello(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (s *Server) CreateEvent(w http.ResponseWriter, r *http.Request) {
-	req, err := decodeEventRequest(r)
+	req, err := decodeEventRequest(w, r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err)
+		writeError(r.Context(), w, decodeErrorStatus(err), err)
 
 		return
 	}
 
 	id, title, start, end, description, userID, notifyShift, err := parseEventFields(req)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err)
+		writeError(r.Context(), w, http.StatusBadRequest, err)
 
 		return
 	}
 
 	created, err := s.events.Create(r.Context(), id, title, start, end, description, userID, notifyShift)
 	if err != nil {
-		writeDomainError(w, err)
+		writeDomainError(r.Context(), w, err)
 
 		return
 	}
 
-	writeJSON(w, http.StatusCreated, toOpenAPIEvent(*created))
+	writeJSON(r.Context(), w, http.StatusCreated, toOpenAPIEvent(*created))
 }
 
 func (s *Server) UpdateEvent(w http.ResponseWriter, r *http.Request, id gen.EventID) {
-	req, err := decodeEventRequest(r)
+	req, err := decodeEventRequest(w, r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err)
+		writeError(r.Context(), w, decodeErrorStatus(err), err)
 
 		return
 	}
 
 	_, title, start, end, description, userID, notifyShift, err := parseEventFields(req)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err)
+		writeError(r.Context(), w, http.StatusBadRequest, err)
 
 		return
 	}
 
 	updated, err := s.events.Update(r.Context(), id, title, start, end, description, userID, notifyShift)
 	if err != nil {
-		writeDomainError(w, err)
+		writeDomainError(r.Context(), w, err)
 
 		return
 	}
 
-	writeJSON(w, http.StatusOK, toOpenAPIEvent(*updated))
+	writeJSON(r.Context(), w, http.StatusOK, toOpenAPIEvent(*updated))
 }
 
 func (s *Server) DeleteEvent(w http.ResponseWriter, r *http.Request, id gen.EventID) {
 	if err := s.events.Delete(r.Context(), id); err != nil {
-		writeDomainError(w, err)
+		writeDomainError(r.Context(), w, err)
 
 		return
 	}
@@ -98,7 +101,7 @@ func (s *Server) handleList(
 ) {
 	list, err := listFn(r.Context(), date)
 	if err != nil {
-		writeDomainError(w, err)
+		writeDomainError(r.Context(), w, err)
 
 		return
 	}
@@ -108,29 +111,33 @@ func (s *Server) handleList(
 		resp.Events = append(resp.Events, toOpenAPIEvent(list[i]))
 	}
 
-	writeJSON(w, http.StatusOK, resp)
+	writeJSON(r.Context(), w, http.StatusOK, resp)
 }
 
-func (s *Server) serveOpenAPISpec(w http.ResponseWriter, _ *http.Request) {
+func (s *Server) serveOpenAPISpec(w http.ResponseWriter, r *http.Request) {
 	swagger, err := gen.GetSwagger()
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, fmt.Errorf("load openapi: %w", err))
+		writeError(r.Context(), w, http.StatusInternalServerError, fmt.Errorf("load openapi: %w", err))
+
+		return
+	}
+
+	data, err := swagger.MarshalJSON()
+	if err != nil {
+		writeError(r.Context(), w, http.StatusInternalServerError, fmt.Errorf("marshal openapi: %w", err))
 
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	data, err := swagger.MarshalJSON()
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err)
-
-		return
+	if _, err := w.Write(data); err != nil {
+		logger.FromContext(r.Context()).Error("write openapi response", "err", err)
 	}
-	_, _ = w.Write(data)
 }
 
-func decodeEventRequest(r *http.Request) (gen.EventRequest, error) {
+func decodeEventRequest(w http.ResponseWriter, r *http.Request) (gen.EventRequest, error) {
+	r.Body = http.MaxBytesReader(w, r.Body, maxBodySize)
 	defer r.Body.Close()
 
 	var req gen.EventRequest
@@ -139,6 +146,15 @@ func decodeEventRequest(r *http.Request) (gen.EventRequest, error) {
 	}
 
 	return req, nil
+}
+
+func decodeErrorStatus(err error) int {
+	var maxBytesErr *http.MaxBytesError
+	if errors.As(err, &maxBytesErr) {
+		return http.StatusRequestEntityTooLarge
+	}
+
+	return http.StatusBadRequest
 }
 
 func parseEventFields(
@@ -177,27 +193,39 @@ func toOpenAPIEvent(e event.Event) gen.Event {
 	}
 }
 
-func writeJSON(w http.ResponseWriter, status int, payload any) {
+func writeJSON(ctx context.Context, w http.ResponseWriter, status int, payload any) {
+	log := logger.FromContext(ctx)
+
+	data, err := json.Marshal(payload)
+	if err != nil {
+		log.Error("marshal json response", "status", status, "err", err)
+
+		status = http.StatusInternalServerError
+		data = []byte(`{"error":"internal error"}`)
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(payload)
+	if _, err := w.Write(data); err != nil {
+		log.Error("write json response", "status", status, "err", err)
+	}
 }
 
-func writeError(w http.ResponseWriter, status int, err error) {
-	writeJSON(w, status, gen.Error{Error: err.Error()})
+func writeError(ctx context.Context, w http.ResponseWriter, status int, err error) {
+	writeJSON(ctx, w, status, gen.Error{Error: err.Error()})
 }
 
-func writeDomainError(w http.ResponseWriter, err error) {
+func writeDomainError(ctx context.Context, w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, event.ErrValidation),
 		errors.Is(err, event.ErrFirstDayOfWeek),
 		errors.Is(err, event.ErrFirstDayOfMonth):
-		writeError(w, http.StatusBadRequest, err)
+		writeError(ctx, w, http.StatusBadRequest, err)
 	case errors.Is(err, event.ErrNotFound):
-		writeError(w, http.StatusNotFound, err)
+		writeError(ctx, w, http.StatusNotFound, err)
 	case errors.Is(err, event.ErrDateBusy), errors.Is(err, event.ErrAlreadyExists):
-		writeError(w, http.StatusConflict, err)
+		writeError(ctx, w, http.StatusConflict, err)
 	default:
-		writeError(w, http.StatusInternalServerError, err)
+		writeError(ctx, w, http.StatusInternalServerError, err)
 	}
 }

@@ -78,11 +78,25 @@ func (s *Server) serve(ctx context.Context, ln net.Listener) error {
 	}
 }
 
-func (s *Server) Stop(_ context.Context) error {
-	s.grpcServer.GracefulStop()
-	s.log.Info("grpc server stopped")
+func (s *Server) Stop(ctx context.Context) error {
+	done := make(chan struct{})
+	go func() {
+		s.grpcServer.GracefulStop()
+		close(done)
+	}()
 
-	return nil
+	select {
+	case <-done:
+		s.log.Info("grpc server stopped")
+
+		return nil
+	case <-ctx.Done():
+		s.grpcServer.Stop()
+		<-done
+		s.log.Warn("grpc server stopped: graceful stop interrupted", "err", ctx.Err())
+
+		return fmt.Errorf("graceful stop: %w", ctx.Err())
+	}
 }
 
 func (s *Server) loggingInterceptor(

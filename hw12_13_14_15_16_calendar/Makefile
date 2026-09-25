@@ -68,14 +68,17 @@ version: build
 test:
 	go test -race ./...
 
-install-proto-deps:
+check-protoc:
+	@command -v protoc > /dev/null || (echo "protoc not found: install it (brew install protobuf / apt install protobuf-compiler, https://protobuf.dev/installation/)" && exit 1)
+
+install-proto-deps: check-protoc
 	go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.5
 	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.5.1
 
 install-api-deps: install-proto-deps
 	go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.4.1
 
-generate:
+generate: check-protoc
 	go generate ./...
 
 install-lint-deps:
@@ -84,4 +87,4 @@ install-lint-deps:
 lint: install-lint-deps
 	golangci-lint run ./...
 
-.PHONY: build run migrate create-db build-img run-img version test lint run-postgres run-rabbit generate install-proto-deps install-api-deps
+.PHONY: build run migrate create-db build-img run-img version test lint run-postgres run-rabbit generate check-protoc install-proto-deps install-api-deps
