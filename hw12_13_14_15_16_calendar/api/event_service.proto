@@ -1,0 +1,68 @@
+syntax = "proto3";
+
+package event;
+
+option go_package = "github.com/s0meuserhere/otus_home_work/hw12_13_14_15_calendar/internal/server/grpc/gen;gen";
+
+import "google/protobuf/timestamp.proto";
+
+service EventService {
+  rpc CreateEvent(CreateEventRequest) returns (CreateEventResponse);
+  rpc UpdateEvent(UpdateEventRequest) returns (UpdateEventResponse);
+  rpc DeleteEvent(DeleteEventRequest) returns (DeleteEventResponse);
+  rpc ListEventsByDay(ListEventsRequest) returns (ListEventsResponse);
+  rpc ListEventsByWeek(ListEventsRequest) returns (ListEventsResponse);
+  rpc ListEventsByMonth(ListEventsRequest) returns (ListEventsResponse);
+}
+
+message Event {
+  string id = 1;
+  string title = 2;
+  google.protobuf.Timestamp date_start = 3;
+  google.protobuf.Timestamp date_end = 4;
+  string description = 5;
+  string user_id = 6;
+  int32 notify_shift_seconds = 7;
+}
+
+message CreateEventRequest {
+  string id = 1;
+  string title = 2;
+  google.protobuf.Timestamp date_start = 3;
+  google.protobuf.Timestamp date_end = 4;
+  string description = 5;
+  string user_id = 6;
+  int32 notify_shift_seconds = 7;
+}
+
+message CreateEventResponse {
+  Event event = 1;
+}
+
+message UpdateEventRequest {
+  string id = 1;
+  string title = 2;
+  google.protobuf.Timestamp date_start = 3;
+  google.protobuf.Timestamp date_end = 4;
+  string description = 5;
+  string user_id = 6;
+  int32 notify_shift_seconds = 7;
+}
+
+message UpdateEventResponse {
+  Event event = 1;
+}
+
+message DeleteEventRequest {
+  string id = 1;
+}
+
+message ListEventsRequest {
+  google.protobuf.Timestamp date = 1;
+}
+
+message ListEventsResponse {
+  repeated Event events = 1;
+}
+
+message DeleteEventResponse {}

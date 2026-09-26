@@ -12,4 +12,14 @@
 - `hw16_calendar` (от `hw15_calendar`) -> Merge Request в `hw15_calendar` (если уже вмержена, то в `master`)
 
 
+#### Кодогенерация API
+Для `make generate` нужен компилятор `protoc` - `make install-proto-deps` ставит только плагины
+`protoc-gen-go` и `protoc-gen-go-grpc`, сам `protoc` устанавливается отдельно:
+- macOS: `brew install protobuf`
+- Debian/Ubuntu: `apt install protobuf-compiler`
+- другие ОС: https://protobuf.dev/installation/
+
+Плагины для gRPC и HTTP (oapi-codegen): `make install-api-deps`, затем `make generate`.
+
+
 **Домашнее задание не принимается, если не принято ДЗ, предшествующее ему.**

@@ -9,8 +9,11 @@ import (
 	"time"
 
 	"github.com/s0meuserhere/otus_home_work/hw12_13_14_15_calendar/internal/logger"
+	"github.com/s0meuserhere/otus_home_work/hw12_13_14_15_calendar/internal/server/http/gen"
 	eventservice "github.com/s0meuserhere/otus_home_work/hw12_13_14_15_calendar/internal/service/event"
 )
+
+var _ gen.ServerInterface = (*Server)(nil)
 
 type Server struct {
 	log        *logger.Logger
@@ -19,23 +22,26 @@ type Server struct {
 }
 
 func NewServer(log *logger.Logger, addr string, events eventservice.Service) *Server {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/hello", func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("hello"))
-	})
-
-	handler := loggingMiddleware(log, mux)
-
-	return &Server{
+	s := &Server{
 		log:    log,
 		events: events,
-		httpServer: &http.Server{
-			Addr:              addr,
-			Handler:           handler,
-			ReadHeaderTimeout: 5 * time.Second,
-		},
 	}
+
+	mux := http.NewServeMux()
+	handler := gen.HandlerFromMux(s, mux)
+	mux.HandleFunc("GET /openapi.json", s.serveOpenAPISpec)
+
+	s.httpServer = &http.Server{
+		Addr:              addr,
+		Handler:           loggingMiddleware(log, handler),
+		ReadHeaderTimeout: 5 * time.Second,
+	}
+
+	return s
+}
+
+func (s *Server) Handler() http.Handler {
+	return s.httpServer.Handler
 }
 
 func (s *Server) Start(ctx context.Context) error {
