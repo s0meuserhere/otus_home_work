@@ -31,6 +31,6 @@ ENV BIN_FILE "/opt/calendar/calendar-app"
 COPY --from=build ${BIN_FILE} ${BIN_FILE}
 
 ENV CONFIG_FILE /etc/calendar/config.env
-COPY ./configs/config.env ${CONFIG_FILE}
+COPY ./configs/calendar_config.env ${CONFIG_FILE}
 
 CMD ${BIN_FILE} -config ${CONFIG_FILE}

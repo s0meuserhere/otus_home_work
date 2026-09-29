@@ -10,13 +10,17 @@ import (
 
 	"github.com/s0meuserhere/otus_home_work/hw12_13_14_15_calendar/internal/buildinfo"
 	"github.com/s0meuserhere/otus_home_work/hw12_13_14_15_calendar/internal/config"
+	"github.com/s0meuserhere/otus_home_work/hw12_13_14_15_calendar/internal/infrastructure"
 	"github.com/s0meuserhere/otus_home_work/hw12_13_14_15_calendar/internal/logger"
+	notifyrepo "github.com/s0meuserhere/otus_home_work/hw12_13_14_15_calendar/internal/repository/notify"
+	senderservice "github.com/s0meuserhere/otus_home_work/hw12_13_14_15_calendar/internal/service/sender"
+	"golang.org/x/sync/errgroup"
 )
 
 var configFile string
 
 func init() {
-	flag.StringVar(&configFile, "config", "./configs/config.env", "Path to configuration file")
+	flag.StringVar(&configFile, "config", "./configs/sender_config.env", "Path to configuration file")
 }
 
 func main() {
@@ -35,7 +39,7 @@ func main() {
 }
 
 func run() error {
-	cfg, err := config.Load(configFile)
+	cfg, err := config.LoadSender(configFile)
 	if err != nil {
 		return fmt.Errorf("load config: %w", err)
 	}
@@ -46,9 +50,35 @@ func run() error {
 		syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 	defer cancel()
 
-	logg.Info("calendar_sender stub is running...")
+	ctx = logger.WithContext(ctx, logg.Slog())
 
-	<-ctx.Done()
+	client, err := infrastructure.NewRabbitClient(cfg.Rabbit)
+	if err != nil {
+		return fmt.Errorf("rabbit: %w", err)
+	}
+	defer func() {
+		if err := client.Close(); err != nil {
+			logg.Error("failed to close rabbit client", "err", err)
+		}
+	}()
+
+	queue := notifyrepo.NewRabbit(client)
+	sender := senderservice.New()
+
+	logg.Info("calendar_sender is running...", "queue", cfg.Rabbit.Queue)
+
+	g, gCtx := errgroup.WithContext(ctx)
+	g.Go(func() error {
+		return queue.Consume(gCtx, cfg.Sender.Prefetch, sender.Send)
+	})
+	g.Go(func() error {
+		return client.Wait(gCtx)
+	})
+
+	if err := g.Wait(); err != nil {
+		return err
+	}
+
 	logg.Info("calendar_sender stopped")
 
 	return nil

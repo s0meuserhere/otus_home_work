@@ -72,7 +72,12 @@ func (d *DB) Update(ctx context.Context, eventID uuid.UUID, e event.Event) error
 			date_end = $4,
 			description = $5,
 			user_id = $6,
-			notify_shift_seconds = $7
+			notify_shift_seconds = $7,
+			-- перенос события сбрасывает отметку об отправке
+			notified_at = CASE
+				WHEN date_start <> $3 OR notify_shift_seconds <> $7 THEN NULL
+				ELSE notified_at
+			END
 		WHERE id = $1`
 
 	tag, err := d.pool.Exec(
@@ -181,4 +186,16 @@ func (d *DB) IsDateBusy(
 	}
 
 	return true, nil
+}
+
+// DeleteEndedBefore удаляет события, закончившиеся раньше before.
+func (d *DB) DeleteEndedBefore(ctx context.Context, before time.Time) (int64, error) {
+	const query = `DELETE FROM events WHERE date_end < $1`
+
+	tag, err := d.pool.Exec(ctx, query, before)
+	if err != nil {
+		return 0, fmt.Errorf("delete old events: %w", err)
+	}
+
+	return tag.RowsAffected(), nil
 }

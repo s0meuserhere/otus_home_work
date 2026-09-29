@@ -23,7 +23,7 @@ import (
 var configFile string
 
 func init() {
-	flag.StringVar(&configFile, "config", "./configs/config.env", "Path to configuration file")
+	flag.StringVar(&configFile, "config", "./configs/calendar_config.env", "Path to configuration file")
 }
 
 func main() {
@@ -42,7 +42,7 @@ func main() {
 }
 
 func run() error {
-	cfg, err := config.Load(configFile)
+	cfg, err := config.LoadCalendar(configFile)
 	if err != nil {
 		return fmt.Errorf("load config: %w", err)
 	}

@@ -96,3 +96,18 @@ func (m *Memory) IsDateBusy(
 
 	return false, nil
 }
+
+func (m *Memory) DeleteEndedBefore(_ context.Context, before time.Time) (int64, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	var deleted int64
+	for id, e := range m.events {
+		if e.GetDateEnd().Before(before) {
+			delete(m.events, id)
+			deleted++
+		}
+	}
+
+	return deleted, nil
+}

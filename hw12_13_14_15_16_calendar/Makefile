@@ -1,8 +1,12 @@
-BIN := "./bin/calendar"
+BIN_DIR := ./bin
+BIN := $(BIN_DIR)/calendar
+BIN_SCHEDULER := $(BIN_DIR)/calendar_scheduler
+BIN_SENDER := $(BIN_DIR)/calendar_sender
 DOCKER_IMG="calendar:develop"
 
+BUILDINFO := github.com/s0meuserhere/otus_home_work/hw12_13_14_15_calendar/internal/buildinfo
 GIT_HASH := $(shell git log --format="%h" -n 1)
-LDFLAGS := -X main.release="develop" -X main.buildDate=$(shell date -u +%Y-%m-%dT%H:%M:%S) -X main.gitHash=$(GIT_HASH)
+LDFLAGS := -X $(BUILDINFO).Release=develop -X $(BUILDINFO).BuildDate=$(shell date -u +%Y-%m-%dT%H:%M:%S) -X $(BUILDINFO).GitHash=$(GIT_HASH)
 
 #Postrges
 POSTGRES_USER ?= postgres
@@ -44,12 +48,20 @@ run-rabbit:
 
 build:
 	go build -v -o $(BIN) -ldflags "$(LDFLAGS)" ./cmd/calendar
+	go build -v -o $(BIN_SCHEDULER) -ldflags "$(LDFLAGS)" ./cmd/calendar_scheduler
+	go build -v -o $(BIN_SENDER) -ldflags "$(LDFLAGS)" ./cmd/calendar_sender
 
-run: build
-	$(BIN) -config ./configs/config.env
+run: build migrate
+	$(BIN) --config=./configs/calendar_config.env
+
+run-scheduler: build migrate
+	$(BIN_SCHEDULER) --config=./configs/scheduler_config.env
+
+run-sender: build
+	$(BIN_SENDER) --config=./configs/sender_config.env
 
 migrate:
-	go run github.com/pressly/goose/v3/cmd/goose@latest \
+	go run github.com/pressly/goose/v3/cmd/goose@v3.26.0 \
 		-dir ./migrations \
 		postgres "$(POSTGRES_DSN)" up
 
@@ -87,4 +99,4 @@ install-lint-deps:
 lint: install-lint-deps
 	golangci-lint run ./...
 
-.PHONY: build run migrate create-db build-img run-img version test lint run-postgres run-rabbit generate check-protoc install-proto-deps install-api-deps
+.PHONY: build run run-scheduler run-sender migrate create-db build-img run-img version test lint run-postgres run-rabbit generate check-protoc install-proto-deps install-api-deps
