@@ -32,14 +32,15 @@ func NewDB(pool *pgxpool.Pool) *DB {
 }
 
 // ListPending возвращает неотправленные уведомления, время которых наступило.
+// Опоздавшие после простоя уведомления тоже уходят, но только пока событие не закончилось.
 func (d *DB) ListPending(ctx context.Context, now time.Time) ([]notify.Notify, error) {
 	const query = `
 		SELECT id, title, date_start, user_id
 		FROM events
 		WHERE notified_at IS NULL
 			AND notify_shift_seconds > 0
-			AND date_start > $1
 			AND date_start - make_interval(secs => notify_shift_seconds) <= $1
+			AND date_end > $1
 		ORDER BY date_start`
 
 	rows, err := d.pool.Query(ctx, query, now)

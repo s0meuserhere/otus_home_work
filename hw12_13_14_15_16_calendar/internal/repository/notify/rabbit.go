@@ -66,7 +66,7 @@ func (r *Rabbit) Publish(ctx context.Context, n notify.Notify) error {
 	return nil
 }
 
-// Consume передаёт уведомления в handle, а нераспознанные сообщения пишет в лог и удаляет.
+// Consume передаёт уведомления в handle, а нераспознанные пишет в лог и отклоняет в очередь недоставленных.
 func (r *Rabbit) Consume(
 	ctx context.Context,
 	prefetch int,

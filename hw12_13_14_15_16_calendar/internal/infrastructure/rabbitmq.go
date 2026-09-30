@@ -10,7 +10,12 @@ import (
 	"github.com/s0meuserhere/otus_home_work/hw12_13_14_15_calendar/internal/config"
 )
 
-const rabbitExchangeKind = "direct"
+const (
+	rabbitExchangeKind = "direct"
+	// Суффиксы для exchange и очереди недоставленных сообщений.
+	rabbitDeadLetterExchangeSuffix = ".dlx"
+	rabbitDeadLetterQueueSuffix    = ".dlq"
+)
 
 // rabbitTopology - структуры, которые создаются при подключении.
 type rabbitTopology struct {
@@ -76,24 +81,40 @@ func NewRabbitClient(cfg config.RabbitConf) (*RabbitClient, error) {
 	return c, nil
 }
 
+// setup создаёт основную очередь и очередь недоставленных сообщений.
+// Отклонённое сообщение брокер перекладывает в очередь недоставленных, а не удаляет.
 func (c *RabbitClient) setup() error {
 	t := c.topology
+	dlx := t.Exchange + rabbitDeadLetterExchangeSuffix
 
-	if err := c.ch.ExchangeDeclare(t.Exchange, rabbitExchangeKind, true, false, false, false, nil); err != nil {
-		return fmt.Errorf("declare exchange %q: %w", t.Exchange, err)
+	if err := c.declare(dlx, t.Queue+rabbitDeadLetterQueueSuffix, t.RoutingKey, nil); err != nil {
+		return err
 	}
 
-	if _, err := c.ch.QueueDeclare(t.Queue, true, false, false, false, nil); err != nil {
-		return fmt.Errorf("declare queue %q: %w", t.Queue, err)
-	}
-
-	if err := c.ch.QueueBind(t.Queue, t.RoutingKey, t.Exchange, false, nil); err != nil {
-		return fmt.Errorf("bind queue %q to %q: %w", t.Queue, t.Exchange, err)
+	if err := c.declare(t.Exchange, t.Queue, t.RoutingKey, amqp.Table{"x-dead-letter-exchange": dlx}); err != nil {
+		return err
 	}
 
 	// Publish ждёт подтверждения брокера.
 	if err := c.ch.Confirm(false); err != nil {
 		return fmt.Errorf("enable publisher confirms: %w", err)
+	}
+
+	return nil
+}
+
+// declare создаёт exchange и очередь, если их ещё нет, и связывает их по routingKey.
+func (c *RabbitClient) declare(exchange, queue, routingKey string, queueArgs amqp.Table) error {
+	if err := c.ch.ExchangeDeclare(exchange, rabbitExchangeKind, true, false, false, false, nil); err != nil {
+		return fmt.Errorf("declare exchange %q: %w", exchange, err)
+	}
+
+	if _, err := c.ch.QueueDeclare(queue, true, false, false, false, queueArgs); err != nil {
+		return fmt.Errorf("declare queue %q: %w", queue, err)
+	}
+
+	if err := c.ch.QueueBind(queue, routingKey, exchange, false, nil); err != nil {
+		return fmt.Errorf("bind queue %q to %q: %w", queue, exchange, err)
 	}
 
 	return nil
@@ -144,7 +165,7 @@ func (c *RabbitClient) Publish(ctx context.Context, body []byte) error {
 	return nil
 }
 
-// Consume передаёт сообщения в handle, а сообщения с ошибкой удаляет из очереди.
+// Consume передаёт сообщения в handle, а сообщения с ошибкой перекладывает в очередь недоставленных.
 func (c *RabbitClient) Consume(
 	ctx context.Context,
 	prefetch int,

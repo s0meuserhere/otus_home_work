@@ -73,6 +73,8 @@ func (s *service) SendPending(ctx context.Context, now time.Time) error {
 	return nil
 }
 
+// send публикует уведомление и затем отмечает его отправленным. Доставка at-least-once.
+// Если после публикации MarkSent не сработает, уведомление уйдёт повторно при следующем запуске.
 func (s *service) send(ctx context.Context, n notify.Notify, now time.Time) error {
 	if err := s.queue.Publish(ctx, n); err != nil {
 		return fmt.Errorf("publish: %w", err)
