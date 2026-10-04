@@ -80,7 +80,13 @@ func (r *Rabbit) Consume(
 			return err
 		}
 
-		return handle(ctx, *n)
+		if err := handle(ctx, *n); err != nil {
+			logger.FromContext(ctx).Error("handle notify failed", "event_id", n.GetEventID(), "err", err)
+
+			return err
+		}
+
+		return nil
 	})
 	if err != nil {
 		return fmt.Errorf("consume notifies: %w", err)
