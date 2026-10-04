@@ -17,11 +17,13 @@ linters-settings:
           - github.com/google/uuid
           - github.com/jackc/pgx
           - github.com/ilyakaznacheev/cleanenv
+          - github.com/joho/godotenv
           - google.golang.org/grpc
           - google.golang.org/protobuf
           - golang.org/x/sync
           - github.com/oapi-codegen/runtime
           - github.com/getkin/kin-openapi
+          - github.com/rabbitmq/amqp091-go
       Test:
         files:
           - $test

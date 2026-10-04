@@ -218,6 +218,41 @@ func TestMemory(t *testing.T) {
 				}
 			},
 		},
+		{
+			name: "delete ended before",
+			run: func(t *testing.T) {
+				t.Helper()
+				repo := NewMemory()
+				ctx := context.Background()
+				userID := uuid.New()
+
+				day := time.Date(2030, 6, 15, 0, 0, 0, 0, time.UTC)
+				early := testEvent(t, userID, day.Add(10*time.Hour), day.Add(11*time.Hour))
+				late := testEvent(t, userID, day.Add(12*time.Hour), day.Add(13*time.Hour))
+
+				for _, e := range []event.Event{early, late} {
+					if err := repo.Create(ctx, e); err != nil {
+						t.Fatalf("create: %v", err)
+					}
+				}
+
+				deleted, err := repo.DeleteEndedBefore(ctx, day.Add(12*time.Hour))
+				if err != nil {
+					t.Fatalf("delete ended before: %v", err)
+				}
+				if deleted != 1 {
+					t.Fatalf("deleted: got %d, want 1", deleted)
+				}
+
+				list, err := repo.ListInRange(ctx, event.DayRange(day))
+				if err != nil {
+					t.Fatalf("list in range: %v", err)
+				}
+				if len(list) != 1 || list[0].GetID() != late.GetID() {
+					t.Fatalf("expected only late event, got %d events", len(list))
+				}
+			},
+		},
 	}
 
 	for _, tt := range tests {

@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/s0meuserhere/otus_home_work/hw12_13_14_15_calendar/internal/domain/event"
 )
 
 var ErrValidation = errors.New("notify validation error")
@@ -18,6 +17,7 @@ type Notify struct {
 	userID         uuid.UUID
 }
 
+// NewNotify допускает прошедшую дату, потому что событие могло начаться, пока уведомление ждало в очереди.
 func NewNotify(eventID uuid.UUID, eventTitle string, eventDateStart time.Time, userID uuid.UUID) (*Notify, error) {
 	if eventID == uuid.Nil {
 		return nil, fmt.Errorf("%w: eventID is required", ErrValidation)
@@ -29,10 +29,6 @@ func NewNotify(eventID uuid.UUID, eventTitle string, eventDateStart time.Time, u
 
 	if eventDateStart.IsZero() {
 		return nil, fmt.Errorf("%w: eventDateStart is required", ErrValidation)
-	}
-
-	if eventDateStart.UTC().Before(time.Now().UTC()) {
-		return nil, fmt.Errorf("%w: event date start must be in the future", ErrValidation)
 	}
 
 	if userID == uuid.Nil {
@@ -47,11 +43,18 @@ func NewNotify(eventID uuid.UUID, eventTitle string, eventDateStart time.Time, u
 	}, nil
 }
 
-func NewNotifyFromEvent(event event.Event) (*Notify, error) {
-	return NewNotify(
-		event.GetID(),
-		event.GetTitle(),
-		event.GetDateStart(),
-		event.GetUserID(),
-	)
+func (n *Notify) GetEventID() uuid.UUID {
+	return n.eventID
+}
+
+func (n *Notify) GetEventTitle() string {
+	return n.eventTitle
+}
+
+func (n *Notify) GetEventDateStart() time.Time {
+	return n.eventDateStart
+}
+
+func (n *Notify) GetUserID() uuid.UUID {
+	return n.userID
 }
