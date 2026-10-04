@@ -10,6 +10,11 @@ import (
 
 var ErrValidation = errors.New("notify validation error")
 
+// Status - результат обработки уведомления рассыльщиком.
+type Status string
+
+const StatusSent Status = "sent"
+
 type Notify struct {
 	eventID        uuid.UUID
 	eventTitle     string

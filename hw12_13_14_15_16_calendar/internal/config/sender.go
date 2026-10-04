@@ -4,6 +4,7 @@ type SenderConf struct {
 	Environment string `env:"ENVIRONMENT" env-default:"local"`
 
 	Logger LoggerConf
+	DB     PGConf
 	Rabbit RabbitConf
 	Sender SenderParams
 }
