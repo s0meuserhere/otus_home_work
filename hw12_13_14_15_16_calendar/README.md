@@ -22,4 +22,13 @@
 Плагины для gRPC и HTTP (oapi-codegen): `make install-api-deps`, затем `make generate`.
 
 
+#### Запуск в Docker
+Нужен Docker Compose **2.24 или новее**: тестовый `deployments/docker-compose.test.yaml`
+использует тег `!reset`, которого в старых версиях нет. Проверить версию: `docker compose version`.
+
+- `make up` - поднять PostgreSQL, RabbitMQ, миграции и все сервисы. HTTP API: http://localhost:8888, gRPC: `localhost:9191`.
+- `make down` - остановить окружение.
+- `make integration-tests` - поднять отдельное окружение, прогнать интеграционные тесты и удалить его.
+
+
 **Домашнее задание не принимается, если не принято ДЗ, предшествующее ему.**
