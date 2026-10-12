@@ -83,6 +83,27 @@ integration-tests:
 	$(COMPOSE_TESTS) down -v; \
 	exit $$code
 
+check-k8s-deps:
+	@command -v minikube > /dev/null || (echo "minikube not found: install it (brew install minikube, https://minikube.sigs.k8s.io/docs/start/)" && exit 1)
+	@command -v helm > /dev/null || (echo "helm not found: install it (brew install helm, https://helm.sh/docs/intro/install/)" && exit 1)
+	@command -v kubectl > /dev/null || (echo "kubectl not found: install it (brew install kubectl, https://kubernetes.io/docs/tasks/tools/)" && exit 1)
+
+k8s-images: check-k8s-deps
+	minikube image build -t calendar:dev -f build/calendar/Dockerfile .
+	minikube image build -t calendar-scheduler:dev -f build/calendar_scheduler/Dockerfile .
+	minikube image build -t calendar-sender:dev -f build/calendar_sender/Dockerfile .
+	minikube image build -t calendar-migrations:dev -f build/migrations/Dockerfile .
+
+k8s-up: check-k8s-deps
+	minikube start
+	minikube addons enable ingress
+	$(MAKE) k8s-images
+	helm upgrade --install calendar deployments/calendar-chart
+	kubectl rollout restart deployment calendar calendar-scheduler calendar-sender
+
+k8s-down:
+	minikube stop
+
 version: build
 	$(BIN) version
 
@@ -108,4 +129,4 @@ install-lint-deps:
 lint: install-lint-deps
 	golangci-lint run ./...
 
-.PHONY: build run run-scheduler run-sender migrate create-db build-img up down integration-tests version test lint run-postgres run-rabbit generate check-protoc install-proto-deps install-api-deps
+.PHONY: build run run-scheduler run-sender migrate create-db build-img up down integration-tests version test lint run-postgres run-rabbit generate check-protoc install-proto-deps install-api-deps check-k8s-deps k8s-images k8s-up k8s-down

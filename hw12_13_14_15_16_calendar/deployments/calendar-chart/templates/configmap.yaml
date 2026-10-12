@@ -1,0 +1,18 @@
+# Общие настройки для всех сервисов. Каждый берет из них только свои переменные.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: calendar-config
+data:
+  STORAGE_MODE: "1"
+  HTTP_PORT: {{ .Values.calendar.httpPort | quote }}
+  GRPC_PORT: {{ .Values.calendar.grpcPort | quote }}
+  SCHEDULER_INTERVAL: {{ .Values.scheduler.interval | quote }}
+  DB_HOST: {{ .Values.db.host | quote }}
+  DB_PORT: {{ .Values.db.port | quote }}
+  DB_USER: {{ .Values.db.user | quote }}
+  DB_PASSWORD: {{ .Values.db.password | quote }}
+  DB_NAME: {{ .Values.db.name | quote }}
+  RABBIT_HOST: {{ .Values.rabbit.host | quote }}
+  RABBIT_USER: {{ .Values.rabbit.user | quote }}
+  RABBIT_PASSWORD: {{ .Values.rabbit.password | quote }}
