@@ -1,0 +1,24 @@
+# Дополнение к docker-compose.yaml для интеграционных тестов.
+services:
+  # Тестам порты на host не нужны, а без сброса они конфликтуют с окружением make up.
+  calendar:
+    ports: !reset []
+
+  calendar_scheduler:
+    environment:
+      SCHEDULER_INTERVAL: 1s
+
+  integration_tests:
+    build:
+      context: ..
+      dockerfile: build/integration_tests/Dockerfile
+    environment:
+      CALENDAR_HTTP_URL: http://calendar:8080
+      CALENDAR_DB_DSN: postgres://postgres:password@postgres:5432/calendar?sslmode=disable
+    depends_on:
+      calendar:
+        condition: service_healthy
+      calendar_scheduler:
+        condition: service_started
+      calendar_sender:
+        condition: service_started

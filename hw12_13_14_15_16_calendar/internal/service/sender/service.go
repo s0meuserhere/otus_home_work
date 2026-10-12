@@ -2,6 +2,8 @@ package sender
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	"github.com/s0meuserhere/otus_home_work/hw12_13_14_15_calendar/internal/domain/notify"
 	"github.com/s0meuserhere/otus_home_work/hw12_13_14_15_calendar/internal/logger"
@@ -13,14 +15,20 @@ type Service interface {
 	Send(ctx context.Context, n notify.Notify) error
 }
 
-type service struct{}
-
-// New создаёт сервис рассыльщика.
-func New() Service {
-	return &service{}
+type StatusRepository interface {
+	SaveStatus(ctx context.Context, n notify.Notify, status notify.Status, at time.Time) error
 }
 
-// Send пишет уведомление в лог вместо реальной отправки.
+type service struct {
+	statuses StatusRepository
+}
+
+// New создаёт сервис рассыльщика.
+func New(statuses StatusRepository) Service {
+	return &service{statuses: statuses}
+}
+
+// Send пишет уведомление в лог вместо реальной отправки и сохраняет статус.
 func (s *service) Send(ctx context.Context, n notify.Notify) error {
 	logger.FromContext(ctx).Info("notify sent",
 		"event_id", n.GetEventID(),
@@ -28,6 +36,10 @@ func (s *service) Send(ctx context.Context, n notify.Notify) error {
 		"event_date", n.GetEventDateStart(),
 		"user_id", n.GetUserID(),
 	)
+
+	if err := s.statuses.SaveStatus(ctx, n, notify.StatusSent, time.Now().UTC()); err != nil {
+		return fmt.Errorf("send: %w", err)
+	}
 
 	return nil
 }

@@ -87,3 +87,16 @@ func (d *DB) MarkSent(ctx context.Context, eventID uuid.UUID, at time.Time) erro
 
 	return nil
 }
+
+// SaveStatus записывает результат обработки уведомления.
+func (d *DB) SaveStatus(ctx context.Context, n notify.Notify, status notify.Status, at time.Time) error {
+	const query = `
+		INSERT INTO notify_statuses (event_id, user_id, status, created_at)
+		VALUES ($1, $2, $3, $4)`
+
+	if _, err := d.pool.Exec(ctx, query, n.GetEventID(), n.GetUserID(), string(status), at); err != nil {
+		return fmt.Errorf("save notify status: %w", err)
+	}
+
+	return nil
+}

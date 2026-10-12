@@ -2,7 +2,8 @@ BIN_DIR := ./bin
 BIN := $(BIN_DIR)/calendar
 BIN_SCHEDULER := $(BIN_DIR)/calendar_scheduler
 BIN_SENDER := $(BIN_DIR)/calendar_sender
-DOCKER_IMG="calendar:develop"
+COMPOSE := docker compose -f deployments/docker-compose.yaml
+COMPOSE_TESTS := docker compose -p calendar-tests -f deployments/docker-compose.yaml -f deployments/docker-compose.test.yaml
 
 BUILDINFO := github.com/s0meuserhere/otus_home_work/hw12_13_14_15_calendar/internal/buildinfo
 GIT_HASH := $(shell git log --format="%h" -n 1)
@@ -66,13 +67,21 @@ migrate:
 		postgres "$(POSTGRES_DSN)" up
 
 build-img:
-	docker build \
-		--build-arg=LDFLAGS="$(LDFLAGS)" \
-		-t $(DOCKER_IMG) \
-		-f build/Dockerfile .
+	$(COMPOSE) build
 
-run-img: build-img
-	docker run -p 8080:8080 $(DOCKER_IMG)
+up:
+	$(COMPOSE) up -d --build --wait
+
+down:
+	$(COMPOSE) down
+
+# Тесты идут в отдельном проекте, поэтому down -v не трогает базу окружения make up.
+integration-tests:
+	$(COMPOSE_TESTS) build
+	$(COMPOSE_TESTS) run --rm integration_tests; \
+	code=$$?; \
+	$(COMPOSE_TESTS) down -v; \
+	exit $$code
 
 version: build
 	$(BIN) version
@@ -99,4 +108,4 @@ install-lint-deps:
 lint: install-lint-deps
 	golangci-lint run ./...
 
-.PHONY: build run run-scheduler run-sender migrate create-db build-img run-img version test lint run-postgres run-rabbit generate check-protoc install-proto-deps install-api-deps
+.PHONY: build run run-scheduler run-sender migrate create-db build-img up down integration-tests version test lint run-postgres run-rabbit generate check-protoc install-proto-deps install-api-deps

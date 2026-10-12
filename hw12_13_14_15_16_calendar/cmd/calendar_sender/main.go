@@ -52,6 +52,17 @@ func run() error {
 
 	ctx = logger.WithContext(ctx, logg.Slog())
 
+	dsn, err := cfg.DB.DSN()
+	if err != nil {
+		return fmt.Errorf("db dsn: %w", err)
+	}
+
+	pool, err := infrastructure.NewPgxPool(ctx, dsn)
+	if err != nil {
+		return fmt.Errorf("db pool: %w", err)
+	}
+	defer pool.Close()
+
 	client, err := infrastructure.NewRabbitClient(cfg.Rabbit)
 	if err != nil {
 		return fmt.Errorf("rabbit: %w", err)
@@ -63,7 +74,7 @@ func run() error {
 	}()
 
 	queue := notifyrepo.NewRabbit(client)
-	sender := senderservice.New()
+	sender := senderservice.New(notifyrepo.NewDB(pool.Pool))
 
 	logg.Info("calendar_sender is running...", "queue", cfg.Rabbit.Queue)
 
