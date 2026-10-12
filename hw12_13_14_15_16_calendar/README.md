@@ -31,4 +31,20 @@
 - `make integration-tests` - поднять отдельное окружение, прогнать интеграционные тесты и удалить его.
 
 
+#### Запуск в Kubernetes
+Нужны minikube, helm и kubectl. Проверить, что всё установлено: `make check-k8s-deps`.
+
+Helm chart лежит в `deployments/calendar-chart`, настройки по умолчанию в `values.yaml`.
+
+- `make k8s-up` - запустить minikube, собрать образы и установить chart. Повторный запуск подхватывает изменения в коде.
+- `make k8s-down` - остановить кластер. Релиз и данные базы сохраняются.
+
+HTTP API доступен через Ingress по хосту `calendar.local`, gRPC по хосту `grpc.calendar.local`:
+```bash
+kubectl -n ingress-nginx port-forward svc/ingress-nginx-controller 8081:80
+curl -H 'Host: calendar.local' http://localhost:8081/hello
+grpcurl -plaintext -authority grpc.calendar.local localhost:8081 list
+```
+
+
 **Домашнее задание не принимается, если не принято ДЗ, предшествующее ему.**
