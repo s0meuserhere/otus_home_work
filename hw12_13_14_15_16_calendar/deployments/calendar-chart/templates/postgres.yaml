@@ -31,7 +31,10 @@ spec:
             - name: POSTGRES_USER
               value: {{ .Values.db.user | quote }}
             - name: POSTGRES_PASSWORD
-              value: {{ .Values.db.password | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: calendar-secret
+                  key: DB_PASSWORD
             - name: POSTGRES_DB
               value: {{ .Values.db.name | quote }}
           ports:

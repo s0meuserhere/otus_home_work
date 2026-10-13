@@ -19,7 +19,10 @@ spec:
             - name: RABBITMQ_DEFAULT_USER
               value: {{ .Values.rabbit.user | quote }}
             - name: RABBITMQ_DEFAULT_PASS
-              value: {{ .Values.rabbit.password | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: calendar-secret
+                  key: RABBIT_PASSWORD
           ports:
             - containerPort: 5672
 ---
@@ -31,4 +34,5 @@ spec:
   selector:
     app: rabbitmq
   ports:
-    - port: 5672
+    - port: {{ .Values.rabbit.port }}
+      targetPort: 5672

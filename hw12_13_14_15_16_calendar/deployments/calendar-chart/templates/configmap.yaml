@@ -11,8 +11,7 @@ data:
   DB_HOST: {{ .Values.db.host | quote }}
   DB_PORT: {{ .Values.db.port | quote }}
   DB_USER: {{ .Values.db.user | quote }}
-  DB_PASSWORD: {{ .Values.db.password | quote }}
   DB_NAME: {{ .Values.db.name | quote }}
   RABBIT_HOST: {{ .Values.rabbit.host | quote }}
+  RABBIT_PORT: {{ .Values.rabbit.port | quote }}
   RABBIT_USER: {{ .Values.rabbit.user | quote }}
-  RABBIT_PASSWORD: {{ .Values.rabbit.password | quote }}

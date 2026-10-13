@@ -13,6 +13,14 @@ calendar:
 scheduler:
   interval: 1m
 
+resources:
+  requests:
+    cpu: 50m
+    memory: 32Mi
+  limits:
+    cpu: 200m
+    memory: 128Mi
+
 db:
   host: postgres
   port: 5432
@@ -23,6 +31,7 @@ db:
 
 rabbit:
   host: rabbitmq
+  port: 5672
   user: rabbit
   password: password
 

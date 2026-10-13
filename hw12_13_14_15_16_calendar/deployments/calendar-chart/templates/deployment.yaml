@@ -19,17 +19,31 @@ spec:
           envFrom:
             - configMapRef:
                 name: calendar-config
+            - secretRef:
+                name: calendar-secret
       containers:
         - name: calendar
           image: {{ .Values.images.calendar }}
           envFrom:
             - configMapRef:
                 name: calendar-config
+            - secretRef:
+                name: calendar-secret
           ports:
             - name: http
               containerPort: {{ .Values.calendar.httpPort }}
             - name: grpc
               containerPort: {{ .Values.calendar.grpcPort }}
+          readinessProbe:
+            httpGet:
+              path: /hello
+              port: http
+          livenessProbe:
+            httpGet:
+              path: /hello
+              port: http
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -52,6 +66,10 @@ spec:
           envFrom:
             - configMapRef:
                 name: calendar-config
+            - secretRef:
+                name: calendar-secret
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -73,3 +91,7 @@ spec:
           envFrom:
             - configMapRef:
                 name: calendar-config
+            - secretRef:
+                name: calendar-secret
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
