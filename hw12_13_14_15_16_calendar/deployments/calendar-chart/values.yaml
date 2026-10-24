@@ -1,0 +1,40 @@
+# Образы собираются внутри minikube командой make k8s-images.
+images:
+  calendar: calendar:dev
+  scheduler: calendar-scheduler:dev
+  sender: calendar-sender:dev
+  migrations: calendar-migrations:dev
+
+calendar:
+  replicas: 1
+  httpPort: 8080
+  grpcPort: 9191
+
+scheduler:
+  interval: 1m
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 32Mi
+  limits:
+    cpu: 200m
+    memory: 128Mi
+
+db:
+  host: postgres
+  port: 5432
+  user: postgres
+  password: password
+  name: calendar
+  storage: 1Gi
+
+rabbit:
+  host: rabbitmq
+  port: 5672
+  user: rabbit
+  password: password
+
+ingress:
+  host: calendar.local
+  grpcHost: grpc.calendar.local

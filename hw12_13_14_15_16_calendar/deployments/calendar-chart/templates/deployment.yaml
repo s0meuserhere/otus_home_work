@@ -1,0 +1,97 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: calendar
+spec:
+  replicas: {{ .Values.calendar.replicas }}
+  selector:
+    matchLabels:
+      app: calendar
+  template:
+    metadata:
+      labels:
+        app: calendar
+    spec:
+      # Перед запуском API накатываются миграции.
+      initContainers:
+        - name: migrations
+          image: {{ .Values.images.migrations }}
+          envFrom:
+            - configMapRef:
+                name: calendar-config
+            - secretRef:
+                name: calendar-secret
+      containers:
+        - name: calendar
+          image: {{ .Values.images.calendar }}
+          envFrom:
+            - configMapRef:
+                name: calendar-config
+            - secretRef:
+                name: calendar-secret
+          ports:
+            - name: http
+              containerPort: {{ .Values.calendar.httpPort }}
+            - name: grpc
+              containerPort: {{ .Values.calendar.grpcPort }}
+          readinessProbe:
+            httpGet:
+              path: /hello
+              port: http
+          livenessProbe:
+            httpGet:
+              path: /hello
+              port: http
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: calendar-scheduler
+spec:
+  # Планировщик всегда один.
+  replicas: 1
+  selector:
+    matchLabels:
+      app: calendar-scheduler
+  template:
+    metadata:
+      labels:
+        app: calendar-scheduler
+    spec:
+      containers:
+        - name: calendar-scheduler
+          image: {{ .Values.images.scheduler }}
+          envFrom:
+            - configMapRef:
+                name: calendar-config
+            - secretRef:
+                name: calendar-secret
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: calendar-sender
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: calendar-sender
+  template:
+    metadata:
+      labels:
+        app: calendar-sender
+    spec:
+      containers:
+        - name: calendar-sender
+          image: {{ .Values.images.sender }}
+          envFrom:
+            - configMapRef:
+                name: calendar-config
+            - secretRef:
+                name: calendar-secret
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

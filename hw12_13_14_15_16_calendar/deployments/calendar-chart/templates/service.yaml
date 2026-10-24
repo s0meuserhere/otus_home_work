@@ -1,0 +1,13 @@
+# Планировщик и рассыльщик сами никого не слушают, поэтому Service нужен только API.
+apiVersion: v1
+kind: Service
+metadata:
+  name: calendar
+spec:
+  selector:
+    app: calendar
+  ports:
+    - name: http
+      port: {{ .Values.calendar.httpPort }}
+    - name: grpc
+      port: {{ .Values.calendar.grpcPort }}
